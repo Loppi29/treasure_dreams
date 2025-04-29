@@ -20,7 +20,7 @@
     const canvas = document.getElementById("gameCanvas");
     const ctx = canvas.getContext("2d");
 
-    const playerSize = 40;
+    const playerSize = 50;
     const coinSize = 10;
     const enemySize = 20;
     const obstacleSize = 40;
@@ -36,12 +36,13 @@
     let blinkCounter = 0;
     let bestScore;
 
-    // アイテム用
     let item = null;
     let itemActive = false;
     let itemCooldown = 0;
     let itemEffectTimer = 0;
 
+    const bgImg = new Image();
+    bgImg.src = 'background_2.png'
     const playerImg = new Image();
     playerImg.src = 'main_character.png';
 
@@ -212,7 +213,7 @@
       }
     }
 
-    let auraAngle = 0; // オーラの回転角度
+    let auraAngle = 0;
 
     function drawAura(cx, cy) {
       const particleCount = 12;
@@ -228,20 +229,19 @@
         ctx.fill();
       }
 
-      auraAngle += 0.05; // 回転速度
+      auraAngle += 0.05;
     }
 
     function drawGame() {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.drawImage(bgImg, 0, 0, canvas.width, canvas.height);
       ctx.fillStyle = "#888";
       obstacles.forEach(o => ctx.fillRect(o.x, o.y, obstacleSize, obstacleSize));
 
       if (!blinking || (blinkCounter % 10 < 5)) {
         ctx.drawImage(playerImg, player.x, player.y, playerSize, playerSize);
-
-        // アイテム取得時にオーラを描画
         if (itemActive) {
-          drawAura(player.x + playerSize / 2, player.y + playerSize / 2); // プレイヤー中心にオーラを描画
+          drawAura(player.x + playerSize / 2, player.y + playerSize / 2);
         }
       }
 
