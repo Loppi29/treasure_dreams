@@ -11,8 +11,8 @@
 <body>
   <canvas id="gameCanvas" width="600" height="400"></canvas>
   <div id="controls">
-    <button onclick="startGame()">Game Start</button>
-    <p id="scoreDisplay">Score: 0 | Time: 30秒</p>
+    <button id="startButton" onclick="startGame()" disabled>Game Start</button>
+    <p id="scoreDisplay">Score: 0 | Time: 30 sec</p>
     <p id="bestScoreDisplay">Best Score: 0</p>
   </div>
 
@@ -20,7 +20,7 @@
     const canvas = document.getElementById("gameCanvas");
     const ctx = canvas.getContext("2d");
 
-    const playerSize = 40;
+    const playerSize = 50;
     const coinSize = 10;
     const enemySize = 20;
     const obstacleSize = 40;
@@ -36,9 +36,16 @@
     let blinkCounter = 0;
     let bestScore;
 
-    // キャラクター画像を読み込み
+    // 背景画像とプレイヤー画像の読み込み
+    const backgroundImg = new Image();
+    backgroundImg.src = 'background_2.png';
     const playerImg = new Image();
     playerImg.src = 'main_character.png';
+
+    // 背景画像の読み込み完了後にスタートボタンを有効化
+    backgroundImg.onload = () => {
+      document.getElementById("startButton").disabled = false;
+    };
 
     // ベストスコアの読み込み
     if (localStorage.getItem('bestScore_level_1')) {
@@ -48,7 +55,7 @@
       localStorage.setItem('bestScore_level_1', bestScore);
     }
 
-    document.getElementById("bestScoreDisplay").textContent = `Best score: ${bestScore}`;
+    document.getElementById("bestScoreDisplay").textContent = `Best Score: ${bestScore}`;
 
     document.addEventListener("keydown", (e) => keys[e.key] = true);
     document.addEventListener("keyup", (e) => keys[e.key] = false);
@@ -186,11 +193,12 @@
       moveEnemies();
       checkCollisions();
       drawGame();
-      document.getElementById("scoreDisplay").textContent = `Score: ${score} | Time: ${timeLeft}sec`;
+      document.getElementById("scoreDisplay").textContent = `Score: ${score} | Time: ${timeLeft}秒`;
     }
 
     function drawGame() {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      // 背景画像を描画
+      ctx.drawImage(backgroundImg, 0, 0, canvas.width, canvas.height);
 
       ctx.fillStyle = "#888";
       obstacles.forEach(o => ctx.fillRect(o.x, o.y, obstacleSize, obstacleSize));
