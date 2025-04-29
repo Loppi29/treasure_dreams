@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <title>Level 1</title>
+  <style>
+    canvas { background: #eef; display: block; margin: 0 auto; }
+    #controls { text-align: center; margin-top: 10px; }
+  </style>
+</head>
+<body>
+  <canvas id="gameCanvas" width="600" height="400"></canvas>
+  <div id="controls">
+    <button onclick="startGame()">Game Start</button>
+    <p id="scoreDisplay">Score: 0 | Time: 30秒</p>
+    <p id="bestScoreDisplay">Best Score: 0</p>
+  </div>
+
+  <script>
+    const canvas = document.getElementById("gameCanvas");
+    const ctx = canvas.getContext("2d");
+
+    const playerSize = 40;
+    const coinSize = 10;
+    const enemySize = 20;
+    const obstacleSize = 40;
+    const maxCoins = 10;
+    const obstacleCount = 8;
+
+    let player, coins, enemies, obstacles;
+    let keys = {};
+    let score = 0;
+    let timeLeft = 30;
+    let gameInterval, timerInterval;
+    let blinking = false;
+    let blinkCounter = 0;
+    let bestScore;
+
+    // キャラクター画像を読み込み
+    const playerImg = new Image();
+    playerImg.src = 'main_character.png';
+
+    // ベストスコアの読み込み
+    if (localStorage.getItem('bestScore_level_1')) {
+      bestScore = parseInt(localStorage.getItem('bestScore_level_1'));
+    } else {
+      bestScore = 0;
+      localStorage.setItem('bestScore_level_1', bestScore);
+    }
+
+    document.getElementById("bestScoreDisplay").textContent = `Best score: ${bestScore}`;
+
+    document.addEventListener("keydown", (e) => keys[e.key] = true);
+    document.addEventListener("keyup", (e) => keys[e.key] = false);
+
+    function startGame() {
+      score = 0;
+      timeLeft = 30;
+      obstacles = [];
+      coins = [];
+      enemies = [
+        { x: 100, y: 100, dx: 2, dy: 1.5 },
+      ];
+      placeRandomObstacles();
+      player = generateRandomPosition(playerSize);
+      placeCoins(maxCoins);
+      blinking = false;
+      keys = {};
+
+      clearInterval(gameInterval);
+      clearInterval(timerInterval);
+      gameInterval = setInterval(updateGame, 1000 / 60);
+      timerInterval = setInterval(() => {
+        timeLeft--;
+        if (timeLeft <= 0) endGame();
+      }, 1000);
+    }
+
+    function generateRandomPosition(size) {
+      let pos;
+      let tries = 0;
+      do {
+        pos = {
+          x: Math.floor(Math.random() * (canvas.width - size)),
+          y: Math.floor(Math.random() * (canvas.height - size))
+        };
+        tries++;
+        if (tries > 100) break;
+      } while (checkCollisionWithObstacles(pos, size));
+      return pos;
+    }
+
+    function placeCoins(count) {
+      while (coins.length < count) {
+        let coin = generateRandomPosition(coinSize);
+        coins.push(coin);
+      }
+    }
+
+    function placeRandomObstacles() {
+      while (obstacles.length < obstacleCount) {
+        let obs = {
+          x: Math.floor(Math.random() * (canvas.width - obstacleSize)),
+          y: Math.floor(Math.random() * (canvas.height - obstacleSize))
+        };
+        if (!obstacles.some(o => checkCollision(o, obs, obstacleSize, obstacleSize))) {
+          obstacles.push(obs);
+        }
+      }
+    }
+
+    function movePlayer() {
+      let speed = 3;
+      let nextX = player.x;
+      let nextY = player.y;
+
+      if (keys["ArrowUp"]) nextY -= speed;
+      if (keys["ArrowDown"]) nextY += speed;
+      if (keys["ArrowLeft"]) nextX -= speed;
+      if (keys["ArrowRight"]) nextX += speed;
+
+      const futurePos = { x: nextX, y: nextY };
+
+      const withinBounds =
+        nextX >= 0 &&
+        nextX + playerSize <= canvas.width &&
+        nextY >= 0 &&
+        nextY + playerSize <= canvas.height;
+
+      if (!checkCollisionWithObstacles(futurePos, playerSize) && withinBounds) {
+        player.x = nextX;
+        player.y = nextY;
+      }
+    }
+
+    function moveEnemies() {
+      enemies.forEach(e => {
+        e.x += e.dx;
+        e.y += e.dy;
+        if (e.x < 0 || e.x + enemySize > canvas.width) e.dx *= -1;
+        if (e.y < 0 || e.y + enemySize > canvas.height) e.dy *= -1;
+      });
+    }
+
+    function checkCollisions() {
+      coins = coins.filter(c => {
+        if (checkCollision(player, c, playerSize, coinSize)) {
+          score++;
+          if (score % 10 === 0) timeLeft += 5;
+          return false;
+        }
+        return true;
+      });
+
+      if (coins.length < maxCoins) placeCoins(maxCoins);
+
+      enemies.forEach(e => {
+        if (checkCollision(player, e, playerSize, enemySize)) {
+          if (!blinking) {
+            timeLeft -= 5;
+            blinking = true;
+            blinkCounter = 0;
+          }
+        }
+      });
+
+      if (blinking) {
+        blinkCounter++;
+        if (blinkCounter > 30) blinking = false;
+      }
+    }
+
+    function checkCollision(a, b, sizeA, sizeB) {
+      return a.x < b.x + sizeB &&
+             a.x + sizeA > b.x &&
+             a.y < b.y + sizeB &&
+             a.y + sizeA > b.y;
+    }
+
+    function checkCollisionWithObstacles(pos, size) {
+      return obstacles.some(obs => checkCollision(pos, obs, size, obstacleSize));
+    }
+
+    function updateGame() {
+      movePlayer();
+      moveEnemies();
+      checkCollisions();
+      drawGame();
+      document.getElementById("scoreDisplay").textContent = `Score: ${score} | Time: ${timeLeft}sec`;
+    }
+
+    function drawGame() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      ctx.fillStyle = "#888";
+      obstacles.forEach(o => ctx.fillRect(o.x, o.y, obstacleSize, obstacleSize));
+
+      if (!blinking || (blinkCounter % 10 < 5)) {
+        ctx.drawImage(playerImg, player.x, player.y, playerSize, playerSize);
+      }
+
+      ctx.fillStyle = "gold";
+      coins.forEach(c => {
+        ctx.beginPath();
+        ctx.arc(c.x + coinSize / 2, c.y + coinSize / 2, coinSize / 2, 0, Math.PI * 2);
+        ctx.fill();
+      });
+
+      ctx.fillStyle = "red";
+      enemies.forEach(e => ctx.fillRect(e.x, e.y, enemySize, enemySize));
+    }
+
+    function endGame() {
+      clearInterval(gameInterval);
+      clearInterval(timerInterval);
+      if (score > bestScore) {
+        bestScore = score;
+        localStorage.setItem('bestScore_level_1', bestScore);
+      }
+      document.getElementById("bestScoreDisplay").textContent = `Best Score: ${bestScore}`;
+      alert("Gameover! Score: " + score);
+    }
+  </script>
+</body>
+</html>
